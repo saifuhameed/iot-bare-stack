@@ -4,8 +4,8 @@ GREEN='\e[32m'
 BLUE='\e[34m'
 NC='\e[0m' # No Color (resets to default)
 
-echo "${BLUE}Updating apt.${NC}"
-apt update && apt upgrade -y
+#echo "${BLUE}Updating apt.${NC}"
+#apt update && apt upgrade -y
 
 echo "${BLUE}Installing authbind.${NC}"
 apt-get install authbind
