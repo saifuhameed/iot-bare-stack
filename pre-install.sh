@@ -19,6 +19,7 @@ systemctl disable nginx
 echo "${BLUE}Installing essential libraries to run modbus app${NC}"
 apt-get -y build-essential libmodbus-dev  libcjson-dev libsqlite3-dev libhiredis-dev python3-venv python3-pip
 
+pwd
 cd modbus
 runuser -l debian -c "gcc -o  modbus_to_redis  modbus_to_redis.c config.c -lmodbus -lcjson -lsqlite3 -lhiredis"
 
