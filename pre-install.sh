@@ -1,7 +1,7 @@
 #!/bin/bash
-RED='\e[0;31m'
-GREEN='\e[0;32m'
-BLUE='\e[0;34m'
+RED='\e[31m'
+GREEN='\e[32m'
+BLUE='\e[34m'
 NC='\e[0m' # No Color (resets to default)
 
 echo "${BLUE}Updating apt.${NC}"
