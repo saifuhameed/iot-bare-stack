@@ -15,7 +15,12 @@
 #define RETRY_DELAY 5   // seconds between retries for checking status of redis server
 
 //gcc -o  modbus_to_redis  modbus_to_redis.c config.c -lmodbus -lcjson -lsqlite3 -lhiredis 
-
+#define KNRM  "\x1B[0m"   // Normal/Reset
+#define KRED  "\x1B[31m"   // Red
+#define KGRN  "\x1B[32m"   // Green
+#define KYEL  "\x1B[33m"   // Yellow
+#define KBLU  "\x1B[34m"   // Blue
+#define KCYN  "\x1B[36m"   // Cyan
 
 typedef struct {
     int function;
@@ -105,7 +110,7 @@ void populate_redis_keys_for_flask(sqlite3 *db, redisContext *redis, int ttl) {
 
     const char *sql1 = "SELECT slaveid, devices_type_id FROM iotdevices";
     if (sqlite3_prepare_v2(db, sql1, -1, &stmt1, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Failed to prepare iotdevices query: %s\n", sqlite3_errmsg(db));
+        fprintf(stderr, "%sFailed to prepare iotdevices query: %s\n", sqlite3_errmsg(db),KRED);
         return;
     }
 
@@ -133,9 +138,8 @@ void populate_redis_keys_for_flask(sqlite3 *db, redisContext *redis, int ttl) {
             redisReply *reply = redisCommand(redis, "SET %s %s EX %d", key, val, ttl);
             if (reply) freeReplyObject(reply);
 
-            printf("Loaded Redis key: %s → %s\n", key, val);
+            printf("%sLoaded Redis key: %s → %s\n",KGRN, key, val);
         }
-
         sqlite3_finalize(stmt2);
     }
 
@@ -212,7 +216,7 @@ int is_redis_running(char * redis_host, int redis_port) {
     }
 
     if (c->err) {
-        fprintf(stderr, "Redis connection error: %s\n", c->errstr);
+        fprintf(stderr, "Redis connection error: %s [%s:%d]\n", c->errstr,redis_host,redis_port);
         redisFree(c);
         return 0;
     }
@@ -225,22 +229,23 @@ int is_redis_running(char * redis_host, int redis_port) {
 int main() {
     Config cfg;
     if (load_config("config.ini", &cfg) != 0) {
-        fprintf(stderr, "Failed to load config.ini\n");
+        fprintf(stderr, "%sFailed to load config.ini\n%s",KRED,KNRM);
         return 1;
     }
 	if (cfg.redis_ttl <= 0) cfg.redis_ttl = 60;
 
     sqlite3 *db;
     if (sqlite3_open(cfg.db_path, &db) != SQLITE_OK) {
-        fprintf(stderr, "SQLite open error: %s [%s]\n", sqlite3_errmsg(db),cfg.db_path);
+        fprintf(stderr, "%sSQLite open error: %s [%s]%s\n",KRED, sqlite3_errmsg(db),cfg.db_path,KNRM);
         return 1;
     }
+	printf("%s✅ sqlite db file opened.%s\n",KGRN,KNRM);
 	while (!is_redis_running(cfg.redis_host, cfg.redis_port)) {
-        printf("Redis not available yet. Retrying in %d second(s)...\n", RETRY_DELAY);
+        printf("%sRedis not available yet. Retrying in %d second(s)...\n%s", KRED,RETRY_DELAY,KNRM);
         sleep(RETRY_DELAY);
     }
 
-    printf("✅ Redis server is running! Proceeding...\n");
+    printf("%s✅ Redis server is running! Proceeding...%s\n",KGRN,KNRM);
 
     redisContext *redis = redisConnect(cfg.redis_host, cfg.redis_port);
     if (!redis || redis->err) {
@@ -248,12 +253,12 @@ int main() {
         sqlite3_close(db);
         return 1;
     }
-	populate_redis_keys_for_flask(db, redis, cfg.redis_ttl);
+	//populate_redis_keys_for_flask(db, redis, cfg.redis_ttl);
 	
     modbus_t *ctx = modbus_new_rtu(cfg.device, cfg.baudrate, cfg.parity, cfg.data_bits, cfg.stop_bits);
 	//modbus_set_debug(ctx, TRUE);
     if (!ctx || modbus_connect(ctx) == -1) {
-        fprintf(stderr, "Modbus connection failed\n");
+        fprintf(stderr, "%sModbus connection failed\n%s",KRED,KNRM);
         redisFree(redis);
         sqlite3_close(db);
         return 1;
@@ -262,7 +267,7 @@ int main() {
     Device devices[MAX_DEVICES];
     int device_count = 0;
     if (load_devices(db, devices, &device_count) != 0) {
-        fprintf(stderr, "Failed to load devices\n");
+        fprintf(stderr, "%sFailed to load devices\n%s",KRED,KNRM);
         modbus_close(ctx);
         modbus_free(ctx);
         redisFree(redis);
@@ -278,11 +283,11 @@ int main() {
 				RegisterDef *reg = &devices[i].registers[j];
 				uint16_t regs[64];
 				if (read_modbus(ctx, reg->function, reg->address, reg->count, regs) == 0) {
-					printf("slaveid: %d  ",devices[i].slaveid);
-					for (int k = 0; k < reg->count; k++) {
-						printf("%02d, ",regs[k]);
-					}
-					printf("\n");
+					//printf("slaveid: %d  ",devices[i].slaveid);
+					//for (int k = 0; k < reg->count; k++) {
+					//	printf("%02d, ",regs[k]);
+					//}
+					//printf("\n");
 					upload_registers(redis, devices[i].slaveid, reg_offset, regs, reg->count, cfg.redis_ttl);
 					reg_offset += reg->count;
 				}
