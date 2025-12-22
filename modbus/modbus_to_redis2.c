@@ -264,9 +264,11 @@ int main() {
         return 1;
     }
 
+    printf("%s✅ Modbus connection succeeded. [device:%s, baud: %d] %s\n",KGRN, cfg.device, cfg.baudrate, KNRM);
+
     Device devices[MAX_DEVICES];
     int device_count = 0;
-    if (load_devices(db, devices, &device_count) != 0) {
+    if (load_devices(db, devices, & ) != 0) {
         fprintf(stderr, "%sFailed to load devices%s\n",KRED,KNRM);
         modbus_close(ctx);
         modbus_free(ctx);
@@ -274,6 +276,7 @@ int main() {
         sqlite3_close(db);
         return 1;
     }
+    printf("%s✅ Devices loaded. Polling %d devices ... %s\n",KGRN, device_count, KNRM);
 
     while (1) {
         for (int i = 0; i < device_count; i++) {
