@@ -302,7 +302,7 @@ int main() {
                     devices[i].is_online=1;
 				}
 			}
-            if(devices[i].is_online)printf("\r device:%d is online",devices[i].slaveid);
+            if(devices[i].is_online)printf("\rModbus device id: %d is online",devices[i].slaveid);
             fflush(stdout);
         }
         handle_modbus_write_command(db, redis, ctx, cfg.redis_ttl);
