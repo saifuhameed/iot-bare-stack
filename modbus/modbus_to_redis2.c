@@ -33,6 +33,7 @@ typedef struct {
     char devicename[64];
     RegisterDef registers[MAX_REGISTERS];
     int register_count;
+    int is_online;
 } Device;
 
 int parse_register_list(const char *json_str, RegisterDef *regs, int *count) {
@@ -226,6 +227,10 @@ int is_redis_running(char * redis_host, int redis_port) {
     return 1;
 }
 
+void clearScreen() {
+    printf("\e[1;1H\e[2J"); // ANSI codes to clear screen & move cursor to top-left
+}
+
 int main() {
     Config cfg;
     if (load_config("config.ini", &cfg) != 0) {
@@ -276,7 +281,7 @@ int main() {
         sqlite3_close(db);
         return 1;
     }
-    printf("%s✅ Devices loaded. Polling %d devices ... %s\n",KGRN, device_count, KNRM);
+    printf("%s✅ Devices loaded. Polling for %d devices ... %s\n",KGRN, device_count, KNRM);
 
     while (1) {
         for (int i = 0; i < device_count; i++) {
@@ -291,10 +296,14 @@ int main() {
 					//	printf("%02d, ",regs[k]);
 					//}
 					//printf("\n");
+                    
 					upload_registers(redis, devices[i].slaveid, reg_offset, regs, reg->count, cfg.redis_ttl);
 					reg_offset += reg->count;
+                    devices[i].is_online=1;
 				}
 			}
+            if(devices[i].is_online)printf("\r device:%d is online",devices[i].slaveid);
+            fflush(stdout);
         }
         handle_modbus_write_command(db, redis, ctx, cfg.redis_ttl);
         sleep(cfg.poll_interval);
