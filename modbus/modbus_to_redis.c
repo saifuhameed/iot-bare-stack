@@ -229,7 +229,7 @@ int is_redis_running(char * redis_host, int redis_port) {
 int main() {
     Config cfg;
     if (load_config("config.ini", &cfg) != 0) {
-        fprintf(stderr, "%sFailed to load config.ini\n%s",KRED,KNRM);
+        fprintf(stderr, "%sFailed to load config.ini%s\n",KRED,KNRM);
         return 1;
     }
 	if (cfg.redis_ttl <= 0) cfg.redis_ttl = 60;
@@ -241,7 +241,7 @@ int main() {
     }
 	printf("%s✅ sqlite db file opened.%s\n",KGRN,KNRM);
 	while (!is_redis_running(cfg.redis_host, cfg.redis_port)) {
-        printf("%sRedis not available yet. Retrying in %d second(s)...\n%s", KRED,RETRY_DELAY,KNRM);
+        printf("%sRedis not available yet. Retrying in %d second(s)...%s\n", KRED,RETRY_DELAY,KNRM);
         sleep(RETRY_DELAY);
     }
 
@@ -258,7 +258,7 @@ int main() {
     modbus_t *ctx = modbus_new_rtu(cfg.device, cfg.baudrate, cfg.parity, cfg.data_bits, cfg.stop_bits);
 	//modbus_set_debug(ctx, TRUE);
     if (!ctx || modbus_connect(ctx) == -1) {
-        fprintf(stderr, "%sModbus connection failed\n%s",KRED,KNRM);
+        fprintf(stderr, "%sModbus connection failed%s\n",KRED,KNRM);
         redisFree(redis);
         sqlite3_close(db);
         return 1;
@@ -267,7 +267,7 @@ int main() {
     Device devices[MAX_DEVICES];
     int device_count = 0;
     if (load_devices(db, devices, &device_count) != 0) {
-        fprintf(stderr, "%sFailed to load devices\n%s",KRED,KNRM);
+        fprintf(stderr, "%sFailed to load devices%s\n",KRED,KNRM);
         modbus_close(ctx);
         modbus_free(ctx);
         redisFree(redis);
