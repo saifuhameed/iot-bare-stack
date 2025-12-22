@@ -22,11 +22,12 @@ CREATE TABLE IF NOT EXISTS "iot_devices_types" (
 );
 
 CREATE TABLE IF NOT EXISTS "iotdevices" (
+	"device_id"	INTEGER NOT NULL,
 	"slaveid"	INTEGER NOT NULL,
 	"devices_type_id"	INTEGER,
 	"devicename"	TEXT NOT NULL,	
 	"location"	TEXT,	
-	PRIMARY KEY("slaveid")
+	PRIMARY KEY("device_id" AUTOINCREMENT)
 );
 CREATE TABLE IF NOT EXISTS "sensor_data_register_mapping" (
 	"mapid"	INTEGER NOT NULL,
