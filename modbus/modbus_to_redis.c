@@ -268,7 +268,7 @@ int main() {
 
     Device devices[MAX_DEVICES];
     int device_count = 0;
-    if (load_devices(db, devices, & ) != 0) {
+    if (load_devices(db, devices, &device_count ) != 0) {
         fprintf(stderr, "%sFailed to load devices%s\n",KRED,KNRM);
         modbus_close(ctx);
         modbus_free(ctx);
