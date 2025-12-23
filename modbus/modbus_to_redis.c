@@ -174,7 +174,7 @@ int load_devices(sqlite3 *db, Device *devices, int *device_count) {
         dev->slaveid = sqlite3_column_int(stmt, 0);
         const unsigned char *name = sqlite3_column_text(stmt, 1);
         const unsigned char *reglist = sqlite3_column_text(stmt, 2);
-        dev->devices_type_id= sqlite3_column_text(stmt, 3);
+        dev->devices_type_id= sqlite3_column_int(stmt, 3);
         strncpy(dev->devicename, name ? (const char *)name : "", sizeof(dev->devicename));
         if (reglist && parse_register_list((const char *)reglist, dev->registers_def, &dev->register_count) == 0) {
             (*device_count)++;
