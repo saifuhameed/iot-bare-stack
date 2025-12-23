@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS "iotdevices" (
 	"slaveid"	INTEGER NOT NULL,
 	"devices_type_id"	INTEGER,
 	"devicename"	TEXT NOT NULL,	
+	"description"	TEXT NOT NULL,
 	"location"	TEXT,	
 	PRIMARY KEY("device_id" AUTOINCREMENT)
 );
@@ -48,19 +49,19 @@ INSERT INTO "iotdata" ("id","ts","slaveid","iotdata") VALUES (3,'2025-11-05 18:2
 INSERT INTO "iot_devices_types" ("devices_type_id","devices_type_name","description","register_list") VALUES (1001,'Wind Speed Sensor','Wind Speed Sensor','[{"function": 3, "address": 0, "count": 2}]');
 INSERT INTO "iot_devices_types" ("devices_type_id","devices_type_name","description","register_list") VALUES (1002,'Wind Direction Sensor','Wind Direction Sensor','[{"function": 3, "address": 0, "count": 1}]');
 INSERT INTO "iot_devices_types" ("devices_type_id","devices_type_name","description","register_list") VALUES (1003,'Rain Sensor','Tipping Bucket Rain Sensor','[{"function": 3, "address": 0, "count": 16},{"function": 3, "address": 20, "count": 2}]');
-INSERT INTO "iot_devices_types" ("devices_type_id","devices_type_name","description","register_list") VALUES (1004,'Water Level Sensor Head1','Capacitive Water Level Sensor','[{"function": 3, "address": 0, "count": 12},{"function": 3, "address": 22, "count": 7} ]');
-INSERT INTO "iot_devices_types" ("devices_type_id","devices_type_name","description","register_list") VALUES (1005,'Water Level Sensor Head2','Capacitive Water Level Sensor','[{"function": 3, "address": 12, "count": 10},{"function": 3, "address": 29, "count": 7}]');
+INSERT INTO "iot_devices_types" ("devices_type_id","devices_type_name","description","register_list") VALUES (1004,'Water Level Sensor Head1','Water Level Sensor Head1','[{"function": 3, "address": 0, "count": 12},{"function": 3, "address": 22, "count": 7} ]');
+INSERT INTO "iot_devices_types" ("devices_type_id","devices_type_name","description","register_list") VALUES (1005,'Water Level Sensor Head2','Water Level Sensor Head2','[{"function": 3, "address": 12, "count": 10},{"function": 3, "address": 29, "count": 7}]');
 INSERT INTO "iot_devices_types" ("devices_type_id","devices_type_name","description","register_list") VALUES (1006,'DS18B20','Temperature Sensor','[{"function": 3, "address": 0, "count": 8}]');
 INSERT INTO "iot_devices_types" ("devices_type_id","devices_type_name","description","register_list") VALUES (1007,'Atm Temperature and Humidity','Temperature Sensor','[{"function": 3, "address": 16, "count": 3}]');
 
-INSERT INTO "iotdevices" ("slaveid","devicename","location","devices_type_id") VALUES (2,'Wind Speed','Kumbalam',1001);
-INSERT INTO "iotdevices" ("slaveid","devicename","location","devices_type_id") VALUES (3,'Wind Direction','Kumbalam',1002);
-INSERT INTO "iotdevices" ("slaveid","devicename","location","devices_type_id") VALUES (4,'Tipping bucket Rain Sensor','Kumbalam',1003);
-INSERT INTO "iotdevices" ("slaveid","devicename","location","devices_type_id") VALUES (5,'Overhead Tank 1 Water Level Sensor','Kumbalam',1004);
-INSERT INTO "iotdevices" ("slaveid","devicename","location","devices_type_id") VALUES (5,'Overhead Tank 2 Water Level Sensor','Kumbalam',1005);
-INSERT INTO "iotdevices" ("slaveid","devicename","location","devices_type_id") VALUES (6,'Underground Tank 1 Water Level Sensor','Kumbalam',1004);
-INSERT INTO "iotdevices" ("slaveid","devicename","location","devices_type_id") VALUES (7,'DS18B20 Sensors','Kumbalam',1006);
-INSERT INTO "iotdevices" ("slaveid","devicename","location","devices_type_id") VALUES (4,'Atm. Temperature and Humidity Sensor','Kumbalam',1007);
+INSERT INTO "iotdevices" ("slaveid","devicename","description","location","devices_type_id") VALUES (2,'WIND_SPEED_S1','Wind Speed','Kumbalam',1001);
+INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devices_type_id") VALUES (3,'WIND_DIR_S1','Wind Direction','Kumbalam',1002);
+INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devices_type_id") VALUES (4,'RAIN_S1','Tipping bucket Rain Sensor','Kumbalam',1003);
+INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devices_type_id") VALUES (5,'OVHD_TNK1_LEVEL','Overhead Tank 1 Water Level Sensor','Kumbalam',1004);
+INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devices_type_id") VALUES (5,'OVHD_TNK2_LEVEL','Overhead Tank 2 Water Level Sensor','Kumbalam',1005);
+INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devices_type_id") VALUES (6,'UG_TNK1_LEVEL','Underground Tank 1 Water Level Sensor','Kumbalam',1004);
+INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devices_type_id") VALUES (7,'DS18B20 Sensors','Kumbalam',1006);
+INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devices_type_id") VALUES (4,'ATM_TEMP_HUM_S1','Atm. Temperature and Humidity Sensor','Kumbalam',1007);
 
 
 INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1001,'Wind Speed',0,1,'FLOAT',1,'m/s','YES');
