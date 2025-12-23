@@ -488,7 +488,7 @@ int main() {
 					//printf("\n");
                     
 					upload_registers(redis, devices[i].slaveid, reg->address, regs, reg->count, cfg.redis_ttl);
-                    upload_modbus_data_to_redis(redis,devices[i]);
+                    upload_modbus_data_to_redis(redis,&devices[i]);
 					//reg_offset += reg->count;
                     devices[i].is_online=1;
 				}
