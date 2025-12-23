@@ -55,6 +55,7 @@ typedef struct {
     int devices_type_id;
     int is_online;
     DataRegisterMapDef datamap[10];
+    int data_map_count;                  // number of entries in datamap[]
 } Device;
 
 int parse_register_list(const char *json_str, RegisterDef *regs, int *count) {
@@ -86,9 +87,9 @@ int parse_register_list(const char *json_str, RegisterDef *regs, int *count) {
 // Assuming RegisterDef is already defined elsewhere
 // and MAX_REGISTERS is a known constant
 
-int load_data_register_map(sqlite3 *db, Device *dev) {
+int parse_data_register_map(sqlite3 *db, Device *dev) {
     if (!db || !dev) {
-        fprintf(stderr, "Invalid arguments to load_data_register_map\n");
+        fprintf(stderr, "Invalid arguments to parse_data_register_map\n");
         return -1;
     }
 
@@ -109,10 +110,12 @@ int load_data_register_map(sqlite3 *db, Device *dev) {
 
     int count = 0;
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        if (count >= 10) {   // datamap[10] capacity
+        if (count >= 10) {
             fprintf(stderr, "Exceeded datamap capacity\n");
             break;
         }
+
+        DataRegisterMapDef *map = &dev->datamap[count];
 
         const unsigned char *param = sqlite3_column_text(stmt, 0);
         int addr = sqlite3_column_int(stmt, 1);
@@ -121,45 +124,41 @@ int load_data_register_map(sqlite3 *db, Device *dev) {
         int dec_shift = sqlite3_column_int(stmt, 4);
         const unsigned char *unit = sqlite3_column_text(stmt, 5);
 
-        // Fill dev->datamap[count]
-        strncpy(dev->datamap[count].parameter_name,
-                param ? (const char *)param : "",
-                sizeof(dev->datamap[count].parameter_name) - 1);
-        dev->datamap[count].parameter_name[sizeof(dev->datamap[count].parameter_name) - 1] = '\0';
+        strncpy(map->parameter_name, param ? (const char *)param : "",
+                sizeof(map->parameter_name) - 1);
+        map->parameter_name[sizeof(map->parameter_name) - 1] = '\0';
 
-        dev->datamap[count].address = addr;
-        dev->datamap[count].reg_count = reg_count;
+        map->address = addr;
+        map->reg_count = reg_count;
 
-        // Map data_type string to enum
         if (dtype) {
             if (strcasecmp((const char *)dtype, "INT") == 0) {
-                dev->datamap[count].data_type = DT_INT;
+                map->data_type = DT_INT;
             } else if (strcasecmp((const char *)dtype, "FLOAT") == 0) {
-                dev->datamap[count].data_type = DT_FLOAT;
+                map->data_type = DT_FLOAT;
             } else if (strcasecmp((const char *)dtype, "STRING") == 0) {
-                dev->datamap[count].data_type = DT_STRING;
+                map->data_type = DT_STRING;
             } else if (strcasecmp((const char *)dtype, "BOOL") == 0) {
-                dev->datamap[count].data_type = DT_BOOL;
+                map->data_type = DT_BOOL;
             } else {
-                dev->datamap[count].data_type = DT_UNKNOWN;
+                map->data_type = DT_UNKNOWN;
             }
         } else {
-            dev->datamap[count].data_type = DT_UNKNOWN;
+            map->data_type = DT_UNKNOWN;
         }
 
-        dev->datamap[count].dec_shift = dec_shift;
+        map->dec_shift = dec_shift;
 
-        strncpy(dev->datamap[count].unit,
-                unit ? (const char *)unit : "",
-                sizeof(dev->datamap[count].unit) - 1);
-        dev->datamap[count].unit[sizeof(dev->datamap[count].unit) - 1] = '\0';
+        strncpy(map->unit, unit ? (const char *)unit : "",
+                sizeof(map->unit) - 1);
+        map->unit[sizeof(map->unit) - 1] = '\0';
 
         count++;
     }
 
     sqlite3_finalize(stmt);
 
-    dev->register_count = count;  // how many entries loaded
+    dev->data_map_count = count;   // ✅ track datamap entries separately
 
     return count;
 }
@@ -183,7 +182,7 @@ int load_devices(sqlite3 *db, Device *devices, int *device_count) {
         if (reglist && parse_register_list((const char *)reglist, dev->registers, &dev->register_count) == 0) {
             (*device_count)++;
         }
-        load_data_register_map(db,dev);
+        parse_data_register_map(db,dev);
     }
 
     sqlite3_finalize(stmt);
@@ -211,10 +210,9 @@ int upload_modbus_data_to_redis(redisContext *redis, Device *dev) {
         return -1;
     }
 
-    for (int i = 0; i < dev->register_count; i++) {
+    for (int i = 0; i < dev->data_map_count; i++) {
         DataRegisterMapDef *map = &dev->datamap[i];
 
-        // --- Assemble raw value(s) from Modbus registers ---
         double value = 0.0;
         char strval[128];
 
@@ -224,7 +222,6 @@ int upload_modbus_data_to_redis(redisContext *redis, Device *dev) {
                     int raw = dev->registers[map->address];
                     value = raw;
                 } else if (map->reg_count == 2) {
-                    // combine two 16-bit registers into 32-bit int
                     int raw = (dev->registers[map->address] << 16) |
                                dev->registers[map->address + 1];
                     value = raw;
@@ -234,7 +231,6 @@ int upload_modbus_data_to_redis(redisContext *redis, Device *dev) {
 
             case DT_FLOAT:
                 if (map->reg_count == 2) {
-                    // interpret two 16-bit registers as IEEE 754 float
                     uint32_t raw = ((uint32_t)dev->registers[map->address] << 16) |
                                     dev->registers[map->address + 1];
                     float f;
@@ -249,23 +245,21 @@ int upload_modbus_data_to_redis(redisContext *redis, Device *dev) {
                 snprintf(strval, sizeof(strval), "%d", (int)value);
                 break;
 
-            case DT_STRING:
-                // simplistic: treat each register as ASCII char
-                {
-                    char buf[64] = {0};
-                    for (int r = 0; r < map->reg_count && r < (int)sizeof(buf)-1; r++) {
-                        buf[r] = (char)(dev->registers[map->address + r] & 0xFF);
-                    }
-                    snprintf(strval, sizeof(strval), "%s", buf);
+            case DT_STRING: {
+                char buf[64] = {0};
+                for (int r = 0; r < map->reg_count && r < (int)sizeof(buf)-1; r++) {
+                    buf[r] = (char)(dev->registers[map->address + r] & 0xFF);
                 }
+                snprintf(strval, sizeof(strval), "%s", buf);
                 break;
+            }
 
             default:
                 snprintf(strval, sizeof(strval), "UNKNOWN");
                 break;
         }
 
-        // --- Apply decimal shift if numeric ---
+        // Apply decimal shift for numeric types
         if (map->data_type == DT_INT || map->data_type == DT_FLOAT) {
             for (int s = 0; s < map->dec_shift; s++) {
                 value /= 10.0;
@@ -273,7 +267,7 @@ int upload_modbus_data_to_redis(redisContext *redis, Device *dev) {
             snprintf(strval, sizeof(strval), "%.6f", value);
         }
 
-        // --- Upload to Redis ---
+        // Upload to Redis
         redisReply *reply = (redisReply *)redisCommand(
             redis, "SET %s:%s %s",
             dev->devicename, map->parameter_name, strval);
