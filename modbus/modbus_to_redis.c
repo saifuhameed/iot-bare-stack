@@ -52,7 +52,7 @@ typedef struct {
     int slaveid;
     char devicename[64];
     RegisterDef registers_def[MAX_REGISTER_DEF];
-    int registers[MAX_REGISTERS];
+    uint16_t registers[MAX_REGISTERS];
     int register_count;
     int devices_type_id;
     int is_online;
