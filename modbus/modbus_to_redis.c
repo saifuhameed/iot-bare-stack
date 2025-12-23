@@ -210,60 +210,20 @@ int upload_modbus_data_to_redis(redisContext *redis, Device *dev) {
     for (int i = 0; i < dev->data_map_count; i++) {
         DataRegisterMapDef *map = &dev->datamap[i];
 
-        double value = 0.0;
-        char strval[128];
-
-        switch (map->data_type) {
-            case DT_INT:
-                if (map->reg_count == 1) {
-                    int raw = dev->registers[map->address];
-                    value = raw;
-                } else if (map->reg_count == 2) {
-                    int raw = (dev->registers[map->address] << 16) |
-                               dev->registers[map->address + 1];
-                    value = raw;
-                }
-                snprintf(strval, sizeof(strval), "%d", (int)value);
-                break;
-
-            case DT_FLOAT:
-                if (map->reg_count == 2) {
-                    uint32_t raw = ((uint32_t)dev->registers[map->address] << 16) |
-                                    dev->registers[map->address + 1];
-                    float f;
-                    memcpy(&f, &raw, sizeof(float));
-                    value = f;
-                }
-                snprintf(strval, sizeof(strval), "%.6f", value);
-                break;
-
-            case DT_BOOL:
-                value = dev->registers[map->address] ? 1 : 0;
-                snprintf(strval, sizeof(strval), "%d", (int)value);
-                break;
-
-            case DT_STRING: {
-                char buf[64] = {0};
-                for (int r = 0; r < map->reg_count && r < (int)sizeof(buf)-1; r++) {
-                    buf[r] = (char)(dev->registers[map->address + r] & 0xFF);
-                }
-                snprintf(strval, sizeof(strval), "%s", buf);
-                break;
-            }
-
-            default:
-                snprintf(strval, sizeof(strval), "UNKNOWN");
-                break;
+        // --- Assemble number from registers ---
+        long long raw_value = 0;
+        for (int r = 0; r < map->reg_count; r++) {
+            raw_value = (raw_value << 16) | dev->registers[map->address + r];
         }
-
-        // Apply decimal shift for numeric types
-        if (map->data_type == DT_INT || map->data_type == DT_FLOAT) {
-            for (int s = 0; s < map->dec_shift; s++) {
-                value /= 10.0;
-            }
-            snprintf(strval, sizeof(strval), "%.6f", value);
+        // --- Apply decimal shift ---
+        double scaled_value = raw_value;
+        for (int s = 0; s < map->dec_shift; s++) {
+            scaled_value /= 10.0;
         }
-
+        // --- Format as string ---
+        char strval[64];
+        snprintf(strval, sizeof(strval), "%.6f", scaled_value);
+ 
         // Upload to Redis
         redisReply *reply = (redisReply *)redisCommand(
             redis, "SET %s:%s %s",
