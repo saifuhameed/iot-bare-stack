@@ -60,7 +60,7 @@ INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devi
 INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devices_type_id") VALUES (5,'OVHD_TNK1_LEVEL','Overhead Tank 1 Water Level Sensor','Kumbalam',1004);
 INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devices_type_id") VALUES (5,'OVHD_TNK2_LEVEL','Overhead Tank 2 Water Level Sensor','Kumbalam',1005);
 INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devices_type_id") VALUES (6,'UG_TNK1_LEVEL','Underground Tank 1 Water Level Sensor','Kumbalam',1004);
-INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devices_type_id") VALUES (7,'DS18B20 Sensors','Kumbalam',1006);
+INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devices_type_id") VALUES (7,'ROOM_TEMP','DS18B20 Sensors','Kumbalam',1006);
 INSERT INTO "iotdevices" ("slaveid","devicename","description", "location","devices_type_id") VALUES (4,'ATM_TEMP_HUM_S1','Atm. Temperature and Humidity Sensor','Kumbalam',1007);
 
 
