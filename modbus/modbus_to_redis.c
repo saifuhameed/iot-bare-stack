@@ -79,11 +79,7 @@ int parse_register_list(const char *json_str, RegisterDef *regs, int *count) {
     cJSON_Delete(root);
     return 0;
 }
-
-#include <stdio.h>
-#include <string.h>
-#include <sqlite3.h>
-
+ 
 // Assuming RegisterDef is already defined elsewhere
 // and MAX_REGISTERS is a known constant
 
