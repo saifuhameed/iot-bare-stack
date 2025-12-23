@@ -286,7 +286,7 @@ int main() {
     while (1) {
         for (int i = 0; i < device_count; i++) {
             modbus_set_slave(ctx, devices[i].slaveid);
-			int reg_offset = 0;
+			//int reg_offset = 0;
 			for (int j = 0; j < devices[i].register_count; j++) {
 				RegisterDef *reg = &devices[i].registers[j];
 				uint16_t regs[64];
@@ -297,8 +297,8 @@ int main() {
 					//}
 					//printf("\n");
                     
-					upload_registers(redis, devices[i].slaveid, reg_offset, regs, reg->count, cfg.redis_ttl);
-					reg_offset += reg->count;
+					upload_registers(redis, devices[i].slaveid, reg->address, regs, reg->count, cfg.redis_ttl);
+					//reg_offset += reg->count;
                     devices[i].is_online=1;
 				}
 			}
