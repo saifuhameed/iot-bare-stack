@@ -62,7 +62,7 @@ int load_devices(sqlite3 *db, Device *devices, int *device_count) {
     sqlite3_stmt *stmt;
     const char *sql =
         "SELECT d.slaveid, d.devicename, t.register_list "
-        "FROM iotdevices d JOIN iot_devices_types t ON d.devices_type_id = t.devices_type_id";
+        "FROM iotdevices d JOIN iot_devices_types t ON d.devices_type_id = t.devices_type_id ORDER BY d.slaveid;";
 
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) return -1;
 
