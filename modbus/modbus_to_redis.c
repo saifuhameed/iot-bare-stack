@@ -11,7 +11,8 @@
 //#include <arpa/inet.h>  // for socket functions
 
 #define MAX_DEVICES 128
-#define MAX_REGISTERS 5
+#define MAX_REGISTER_DEF 5
+#define MAX_REGISTERS 64
 #define RETRY_DELAY 5   // seconds between retries for checking status of redis server
 
 //gcc -o  modbus_to_redis  modbus_to_redis.c config.c -lmodbus -lcjson -lsqlite3 -lhiredis 
@@ -50,7 +51,8 @@ typedef struct {
 typedef struct {
     int slaveid;
     char devicename[64];
-    RegisterDef registers[MAX_REGISTERS];
+    RegisterDef registers_def[MAX_REGISTER_DEF];
+    int registers[MAX_REGISTERS];
     int register_count;
     int devices_type_id;
     int is_online;
@@ -64,7 +66,7 @@ int parse_register_list(const char *json_str, RegisterDef *regs, int *count) {
 
     *count = 0;
     int len = cJSON_GetArraySize(root);
-    for (int i = 0; i < len && i < MAX_REGISTERS; i++) {
+    for (int i = 0; i < len && i < MAX_REGISTER_DEF; i++) {
         cJSON *item = cJSON_GetArrayItem(root, i);
         cJSON *fn = cJSON_GetObjectItem(item, "function");
         cJSON *addr = cJSON_GetObjectItem(item, "address");
@@ -80,8 +82,7 @@ int parse_register_list(const char *json_str, RegisterDef *regs, int *count) {
     return 0;
 }
  
-// Assuming RegisterDef is already defined elsewhere
-// and MAX_REGISTERS is a known constant
+ 
 
 int parse_data_register_map(sqlite3 *db, Device *dev) {
     if (!db || !dev) {
@@ -175,7 +176,7 @@ int load_devices(sqlite3 *db, Device *devices, int *device_count) {
         const unsigned char *reglist = sqlite3_column_text(stmt, 2);
         dev->devices_type_id= sqlite3_column_text(stmt, 3);
         strncpy(dev->devicename, name ? (const char *)name : "", sizeof(dev->devicename));
-        if (reglist && parse_register_list((const char *)reglist, dev->registers, &dev->register_count) == 0) {
+        if (reglist && parse_register_list((const char *)reglist, dev->registers_def, &dev->register_count) == 0) {
             (*device_count)++;
         }
         parse_data_register_map(db,dev);
@@ -474,21 +475,23 @@ int main() {
             modbus_set_slave(ctx, devices[i].slaveid);
 			//int reg_offset = 0;
 			for (int j = 0; j < devices[i].register_count; j++) {
-				RegisterDef *reg = &devices[i].registers[j];
+				RegisterDef *reg = &devices[i].registers_def[j];
 				uint16_t regs[64];
-				if (read_modbus(ctx, reg->function, reg->address, reg->count, regs) == 0) {
+				if (read_modbus(ctx, reg->function, reg->address, reg->count, &devices[i].registers[reg->address]) == 0) {
 					//printf("slaveid: %d  ",devices[i].slaveid);
 					//for (int k = 0; k < reg->count; k++) {
 					//	printf("%02d, ",regs[k]);
 					//}
 					//printf("\n");
                     
-					upload_registers(redis, devices[i].slaveid, reg->address, regs, reg->count, cfg.redis_ttl);
-                    upload_modbus_data_to_redis(redis,&devices[i]);
+					upload_registers(redis, devices[i].slaveid, reg->address, &devices[i].registers[reg->address], reg->count, cfg.redis_ttl);
+                    
 					//reg_offset += reg->count;
                     devices[i].is_online=1;
+                    
 				}
 			}
+            upload_modbus_data_to_redis(redis,&devices[i]);
             if(devices[i].is_online)printf("\r%sModbus device id: %d is online%s",KCYN,devices[i].slaveid,KNRM);            
         }
         fflush(stdout);
