@@ -11,7 +11,7 @@
 //#include <arpa/inet.h>  // for socket functions
 
 #define MAX_DEVICES 128
-#define MAX_REGISTERS 64
+#define MAX_REGISTERS 5
 #define RETRY_DELAY 5   // seconds between retries for checking status of redis server
 
 //gcc -o  modbus_to_redis  modbus_to_redis.c config.c -lmodbus -lcjson -lsqlite3 -lhiredis 
@@ -21,6 +21,25 @@
 #define KYEL  "\x1B[33m"   // Yellow
 #define KBLU  "\x1B[34m"   // Blue
 #define KCYN  "\x1B[36m"   // Cyan
+
+typedef enum {
+    DT_UNKNOWN = -1,
+    DT_INT = 0,
+    DT_FLOAT = 1,
+    DT_STRING = 2,
+    DT_BOOL = 3
+    // add more as needed: DT_UINT16, DT_INT32, DT_DOUBLE, etc.
+} DataType;
+
+typedef struct {
+    char parameter_name[64];
+    int address;
+    int reg_count;
+    DataType data_type;
+    int dec_shift;
+    char unit[20]; 
+} DataRegisterMapDef;
+
 
 typedef struct {
     int function;
@@ -33,7 +52,9 @@ typedef struct {
     char devicename[64];
     RegisterDef registers[MAX_REGISTERS];
     int register_count;
+    int devices_type_id;
     int is_online;
+    DataRegisterMapDef datamap[10];
 } Device;
 
 int parse_register_list(const char *json_str, RegisterDef *regs, int *count) {
@@ -58,10 +79,95 @@ int parse_register_list(const char *json_str, RegisterDef *regs, int *count) {
     return 0;
 }
 
+#include <stdio.h>
+#include <string.h>
+#include <sqlite3.h>
+
+// Assuming RegisterDef is already defined elsewhere
+// and MAX_REGISTERS is a known constant
+
+int load_data_register_map(sqlite3 *db, Device *dev) {
+    if (!db || !dev) {
+        fprintf(stderr, "Invalid arguments to load_data_register_map\n");
+        return -1;
+    }
+
+    const char *sql =
+        "SELECT parameter_name, register_address, register_count, data_type, decimal_shift, unit "
+        "FROM sensor_data_register_mapping "
+        "WHERE devices_type_id = ? "
+        "AND UPPER(log_to_db) IN ('Y','YES');";
+
+    sqlite3_stmt *stmt;
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        return -1;
+    }
+
+    sqlite3_bind_int(stmt, 1, dev->devices_type_id);
+
+    int count = 0;
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        if (count >= 10) {   // datamap[10] capacity
+            fprintf(stderr, "Exceeded datamap capacity\n");
+            break;
+        }
+
+        const unsigned char *param = sqlite3_column_text(stmt, 0);
+        int addr = sqlite3_column_int(stmt, 1);
+        int reg_count = sqlite3_column_int(stmt, 2);
+        const unsigned char *dtype = sqlite3_column_text(stmt, 3);
+        int dec_shift = sqlite3_column_int(stmt, 4);
+        const unsigned char *unit = sqlite3_column_text(stmt, 5);
+
+        // Fill dev->datamap[count]
+        strncpy(dev->datamap[count].parameter_name,
+                param ? (const char *)param : "",
+                sizeof(dev->datamap[count].parameter_name) - 1);
+        dev->datamap[count].parameter_name[sizeof(dev->datamap[count].parameter_name) - 1] = '\0';
+
+        dev->datamap[count].address = addr;
+        dev->datamap[count].reg_count = reg_count;
+
+        // Map data_type string to enum
+        if (dtype) {
+            if (strcasecmp((const char *)dtype, "INT") == 0) {
+                dev->datamap[count].data_type = DT_INT;
+            } else if (strcasecmp((const char *)dtype, "FLOAT") == 0) {
+                dev->datamap[count].data_type = DT_FLOAT;
+            } else if (strcasecmp((const char *)dtype, "STRING") == 0) {
+                dev->datamap[count].data_type = DT_STRING;
+            } else if (strcasecmp((const char *)dtype, "BOOL") == 0) {
+                dev->datamap[count].data_type = DT_BOOL;
+            } else {
+                dev->datamap[count].data_type = DT_UNKNOWN;
+            }
+        } else {
+            dev->datamap[count].data_type = DT_UNKNOWN;
+        }
+
+        dev->datamap[count].dec_shift = dec_shift;
+
+        strncpy(dev->datamap[count].unit,
+                unit ? (const char *)unit : "",
+                sizeof(dev->datamap[count].unit) - 1);
+        dev->datamap[count].unit[sizeof(dev->datamap[count].unit) - 1] = '\0';
+
+        count++;
+    }
+
+    sqlite3_finalize(stmt);
+
+    dev->register_count = count;  // how many entries loaded
+
+    return count;
+}
+
 int load_devices(sqlite3 *db, Device *devices, int *device_count) {
     sqlite3_stmt *stmt;
     const char *sql =
-        "SELECT d.slaveid, d.devicename, t.register_list "
+        "SELECT d.slaveid, d.devicename, t.register_list , d.devices_type_id "
         "FROM iotdevices d JOIN iot_devices_types t ON d.devices_type_id = t.devices_type_id ORDER BY d.slaveid;";
 
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) return -1;
@@ -72,10 +178,12 @@ int load_devices(sqlite3 *db, Device *devices, int *device_count) {
         dev->slaveid = sqlite3_column_int(stmt, 0);
         const unsigned char *name = sqlite3_column_text(stmt, 1);
         const unsigned char *reglist = sqlite3_column_text(stmt, 2);
+        dev->devices_type_id= sqlite3_column_text(stmt, 3);
         strncpy(dev->devicename, name ? (const char *)name : "", sizeof(dev->devicename));
         if (reglist && parse_register_list((const char *)reglist, dev->registers, &dev->register_count) == 0) {
             (*device_count)++;
         }
+        load_data_register_map(db,dev);
     }
 
     sqlite3_finalize(stmt);
