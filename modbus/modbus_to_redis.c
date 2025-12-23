@@ -221,8 +221,17 @@ int upload_modbus_data_to_redis(redisContext *redis, Device *dev) {
             scaled_value /= 10.0;
         }
         // --- Format as string ---
+        // --- Build format string dynamically ---
+        char fmt[16];
         char strval[64];
-        snprintf(strval, sizeof(strval), "%.6f", scaled_value);
+        if (map->dec_shift == 0) {
+            strcpy(fmt, "%d");
+            snprintf(strval, sizeof(strval), fmt, (int)scaled_value);
+        } else {
+            snprintf(fmt, sizeof(fmt), "%%.%df", map->dec_shift);
+            snprintf(strval, sizeof(strval), fmt, scaled_value);
+        }
+
  
         // Upload to Redis
         redisReply *reply = (redisReply *)redisCommand(
