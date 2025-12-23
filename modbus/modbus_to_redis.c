@@ -204,6 +204,94 @@ int read_modbus(modbus_t *ctx, int function, int address, int count, uint16_t *b
 }
 
 
+
+int upload_modbus_data_to_redis(redisContext *redis, Device *dev) {
+    if (!redis || !dev) {
+        fprintf(stderr, "Invalid arguments to upload_modbus_data_to_redis\n");
+        return -1;
+    }
+
+    for (int i = 0; i < dev->register_count; i++) {
+        DataRegisterMapDef *map = &dev->datamap[i];
+
+        // --- Assemble raw value(s) from Modbus registers ---
+        double value = 0.0;
+        char strval[128];
+
+        switch (map->data_type) {
+            case DT_INT:
+                if (map->reg_count == 1) {
+                    int raw = dev->registers[map->address];
+                    value = raw;
+                } else if (map->reg_count == 2) {
+                    // combine two 16-bit registers into 32-bit int
+                    int raw = (dev->registers[map->address] << 16) |
+                               dev->registers[map->address + 1];
+                    value = raw;
+                }
+                snprintf(strval, sizeof(strval), "%d", (int)value);
+                break;
+
+            case DT_FLOAT:
+                if (map->reg_count == 2) {
+                    // interpret two 16-bit registers as IEEE 754 float
+                    uint32_t raw = ((uint32_t)dev->registers[map->address] << 16) |
+                                    dev->registers[map->address + 1];
+                    float f;
+                    memcpy(&f, &raw, sizeof(float));
+                    value = f;
+                }
+                snprintf(strval, sizeof(strval), "%.6f", value);
+                break;
+
+            case DT_BOOL:
+                value = dev->registers[map->address] ? 1 : 0;
+                snprintf(strval, sizeof(strval), "%d", (int)value);
+                break;
+
+            case DT_STRING:
+                // simplistic: treat each register as ASCII char
+                {
+                    char buf[64] = {0};
+                    for (int r = 0; r < map->reg_count && r < (int)sizeof(buf)-1; r++) {
+                        buf[r] = (char)(dev->registers[map->address + r] & 0xFF);
+                    }
+                    snprintf(strval, sizeof(strval), "%s", buf);
+                }
+                break;
+
+            default:
+                snprintf(strval, sizeof(strval), "UNKNOWN");
+                break;
+        }
+
+        // --- Apply decimal shift if numeric ---
+        if (map->data_type == DT_INT || map->data_type == DT_FLOAT) {
+            for (int s = 0; s < map->dec_shift; s++) {
+                value /= 10.0;
+            }
+            snprintf(strval, sizeof(strval), "%.6f", value);
+        }
+
+        // --- Upload to Redis ---
+        redisReply *reply = (redisReply *)redisCommand(
+            redis, "SET %s:%s %s",
+            dev->devicename, map->parameter_name, strval);
+
+        if (!reply) {
+            fprintf(stderr, "Redis SET failed for %s:%s\n",
+                    dev->devicename, map->parameter_name);
+            continue;
+        }
+        freeReplyObject(reply);
+
+        printf("Uploaded %s:%s = %s\n",
+               dev->devicename, map->parameter_name, strval);
+    }
+
+    return 0;
+}
+
 void upload_registers(redisContext *redis, int slaveid, int base_index, uint16_t *regs, int count, int ttl) {
     for (int k = 0; k < count; k++) {
         char key[64], val[32];
@@ -406,6 +494,7 @@ int main() {
 					//printf("\n");
                     
 					upload_registers(redis, devices[i].slaveid, reg->address, regs, reg->count, cfg.redis_ttl);
+                    upload_modbus_data_to_redis(redis,devices[i]);
 					//reg_offset += reg->count;
                     devices[i].is_online=1;
 				}
