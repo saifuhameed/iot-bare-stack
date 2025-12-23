@@ -203,7 +203,7 @@ int read_modbus(modbus_t *ctx, int function, int address, int count, uint16_t *b
 
 int upload_modbus_data_to_redis(redisContext *redis, Device *dev) {
     if (!redis || !dev) {
-        fprintf(stderr, "Invalid arguments to upload_modbus_data_to_redis\n");
+        fprintf(stderr, "%sInvalid arguments to upload_modbus_data_to_redis%s\n",KRED,KNRM);
         return -1;
     }
 
@@ -239,14 +239,14 @@ int upload_modbus_data_to_redis(redisContext *redis, Device *dev) {
             dev->devicename, map->parameter_name, strval);
 
         if (!reply) {
-            fprintf(stderr, "Redis SET failed for %s:%s\n",
-                    dev->devicename, map->parameter_name);
+            fprintf(stderr, "%sRedis SET failed for %s:%s%s\n",KRED,
+                    dev->devicename, map->parameter_name,KNRM);
             continue;
         }
         freeReplyObject(reply);
 
-        printf("Uploaded %s:%s = %s\n",
-               dev->devicename, map->parameter_name, strval);
+        //printf("Uploaded %s:%s = %s\n",
+             //  dev->devicename, map->parameter_name, strval);
     }
 
     return 0;
@@ -267,7 +267,7 @@ void populate_redis_keys_for_flask(sqlite3 *db, redisContext *redis, int ttl) {
 
     const char *sql1 = "SELECT slaveid, devices_type_id FROM iotdevices";
     if (sqlite3_prepare_v2(db, sql1, -1, &stmt1, NULL) != SQLITE_OK) {
-        fprintf(stderr, "%sFailed to prepare iotdevices query: %s\n", sqlite3_errmsg(db),KRED);
+        fprintf(stderr, "%sFailed to prepare iotdevices query: %s%s\n", sqlite3_errmsg(db),KRED,KNRM);
         return;
     }
 
@@ -342,7 +342,7 @@ void handle_modbus_write_command(sqlite3 *db, redisContext *redis, modbus_t *ctx
 			redisCommand(redis, "DEL %s", key);
 			redisCommand(redis, "DEL %s", fail_key);  // reset failure count
 		} else {
-			fprintf(stderr, "Modbus write failed for %s\n", key);
+			fprintf(stderr, "%sModbus write failed for %s%s\n",KRED, key,KNRM);
 			redisReply *fail = redisCommand(redis, "INCR %s", fail_key);
 			int attempts = (fail && fail->type == REDIS_REPLY_INTEGER) ? fail->integer : 0;
 			if (fail) freeReplyObject(fail);
@@ -368,12 +368,12 @@ void handle_modbus_write_command(sqlite3 *db, redisContext *redis, modbus_t *ctx
 int is_redis_running(char * redis_host, int redis_port) {
     redisContext *c = redisConnect(redis_host, redis_port);
     if (c == NULL) {
-        fprintf(stderr, "Failed to allocate redis context\n");
+        fprintf(stderr, "%sFailed to allocate redis context%s\n",KRED,KNRM);
         return 0;
     }
 
     if (c->err) {
-        fprintf(stderr, "Redis connection error: %s [%s:%d]\n", c->errstr,redis_host,redis_port);
+        fprintf(stderr, "%sRedis connection error: %s [%s:%d]%s\n",KRED, c->errstr,redis_host,redis_port,KNRM);
         redisFree(c);
         return 0;
     }
