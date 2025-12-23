@@ -120,15 +120,15 @@ INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","
 INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1004,'CAP_PF',23,1,'FLOAT',1,'pf','N');
 INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1004,'FREQUENCY',24,2,'INT',0,'Hz','N');
 INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1004,'LIQUID_TEMP',26,1,'FLOAT',1,'°C','YES');
-INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1004,'ALARM_LEVEL_LOW',27,1,'FLOAT',1,'','YES');
-INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1004,'ALARM_LEVEL_HIGH',28,1,'FLOAT',1,'','YES');
+INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1004,'ALARM_LEVEL_LOW',27,1,'INT',0,'','YES');
+INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1004,'ALARM_LEVEL_HIGH',28,1,'INT',0,'','YES');
 
 INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1005,'LEVEL_IN_MM',29,1,'FLOAT',1,'mm','YES');
 INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1005,'CAP_PF',30,1,'FLOAT',1,'pf','N');
 INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1005,'FREQUENCY',31,2,'INT',0,'Hz','N');
 INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1005,'LIQUID_TEMP',33,1,'FLOAT',1,'°C','YES');
-INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1005,'ALARM_LEVEL_LOW',34,1,'FLOAT',1,'','YES');
-INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1005,'ALARM_LEVEL_HIGH',35,1,'FLOAT',1,'','YES');
+INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1005,'ALARM_LEVEL_LOW',34,1,'INT',0,'','YES');
+INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1005,'ALARM_LEVEL_HIGH',35,1,'INT',0,'','YES');
 
 INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1006,'DS18B20_COUNT',2,1,'INT',0,NULL,'YES');
 INSERT INTO "sensor_data_register_mapping" ("devices_type_id","parameter_name","register_address","register_count","data_type","decimal_shift","unit","log_to_db") VALUES (1006,'DS18B20_ROM',3,4,'STRING',0,NULL,'YES');
