@@ -201,7 +201,7 @@ int read_modbus(modbus_t *ctx, int function, int address, int count, uint16_t *b
 
 
 
-int upload_modbus_data_to_redis(redisContext *redis, Device *dev) {
+int upload_modbus_data_to_redis(redisContext *redis, Device *dev, int ttl) {
     if (!redis || !dev) {
         fprintf(stderr, "%sInvalid arguments to upload_modbus_data_to_redis%s\n",KRED,KNRM);
         return -1;
@@ -235,8 +235,8 @@ int upload_modbus_data_to_redis(redisContext *redis, Device *dev) {
  
         // Upload to Redis
         redisReply *reply = (redisReply *)redisCommand(
-            redis, "SET %s:%s %s",
-            dev->devicename, map->parameter_name, strval);
+            redis, "SET %s:%s %s EX %d",
+            dev->devicename, map->parameter_name, strval, ttl);
 
         if (!reply) {
             fprintf(stderr, "%sRedis SET failed for %s:%s%s\n",KRED,
@@ -460,7 +460,7 @@ int main() {
                     
 				}
 			}
-            upload_modbus_data_to_redis(redis,&devices[i]);
+            upload_modbus_data_to_redis(redis,&devices[i], cfg.redis_ttl);
             if(devices[i].is_online)printf("\r%sModbus device id: %d is online%s",KCYN,devices[i].slaveid,KNRM);            
         }
         fflush(stdout);
