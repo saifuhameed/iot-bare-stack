@@ -407,14 +407,14 @@ void clearScreen() {
 
 void on_connect(struct mosquitto *mosq, void *obj, int rc) {
     if(rc == 0) {
-        printf("Connected to broker\n");
+        printf("%s✅Connected to MQTT broker%s\n",KGRN, KNRM);
     } else {
-        printf("Connect failed: %d\n", rc);
+        printf("%sConnect to MQTT broker failed: %d%s\n",KRED, rc, KNRM);
     }
 }
 
 void on_publish(struct mosquitto *mosq, void *obj, int mid) {
-    printf("Message published (mid=%d)\n", mid);
+    //printf("MQTT Message published (mid=%d)\n", mid);
 }
 
 int main() {
@@ -454,7 +454,7 @@ int main() {
     }else{
         mosquitto_connect_callback_set(mosq, on_connect);
         mosquitto_publish_callback_set(mosq, on_publish);
-        mosquitto_connect_async(mosq, cfg.mqtt_broker, cfg.mqtt_port, 60);
+        mosquitto_connect_async(mosq, cfg.mqtt_broker, cfg.mqtt_port,  cfg.mqtt_keepalive);
         mosquitto_loop_start(mosq);  // non-blocking loop in background
         printf("%s✅ MQTT client initialized and connecting to broker %s:%d%s\n",KGRN, cfg.mqtt_broker, cfg.mqtt_port,KNRM);
     }
