@@ -456,6 +456,7 @@ int main() {
         mosquitto_publish_callback_set(mosq, on_publish);
         mosquitto_connect_async(mosq, cfg.mqtt_broker, cfg.mqtt_port, 60);
         mosquitto_loop_start(mosq);  // non-blocking loop in background
+        printf("%s✅ MQTT client initialized and connecting to broker %s:%d%s\n",KGRN, cfg.mqtt_broker, cfg.mqtt_port,KNRM);
     }
 
 	//populate_redis_keys_for_flask(db, redis, cfg.redis_ttl);
