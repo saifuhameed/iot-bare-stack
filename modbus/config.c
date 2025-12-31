@@ -42,7 +42,23 @@ int load_config(const char *filename, Config *cfg) {
             cfg->redis_port = atoi(value);
         } else if (strcmp(key, "redis_ttl") == 0) {
             cfg->redis_ttl = atoi(value);
-        }
+        } else if (strcmp(key, "mqtt_broker") == 0) {
+            strncpy(cfg->mqtt_broker, value, sizeof(cfg->mqtt_broker));
+        } else if (strcmp(key, "mqtt_port") == 0) {
+            cfg->mqtt_port = atoi(value);
+        } else if (strcmp(key, "mqtt_topic_prefix") == 0) {
+            strncpy(cfg->mqtt_topic_prefix, value, sizeof(cfg->mqtt_topic_prefix));
+        } else if (strcmp(key, "mqtt_qos") == 0) {
+            cfg->mqtt_qos = atoi(value);
+        } else if (strcmp(key, "mqtt_keepalive") == 0) {
+            cfg->mqtt_keepalive = atoi(value);
+        } else if (strcmp(key, "mqtt_client_id") == 0) {
+            strncpy(cfg->mqtt_client_id, value, sizeof(cfg->mqtt_client_id));
+        } else if (strcmp(key, "mqtt_username") == 0) {
+            strncpy(cfg->mqtt_username, value, sizeof(cfg->mqtt_username));
+        } else if (strcmp(key, "mqtt_password") == 0) {
+            strncpy(cfg->mqtt_password, value, sizeof(cfg->mqtt_password));
+        }   
     }
 
     fclose(fp);

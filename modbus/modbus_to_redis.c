@@ -8,6 +8,11 @@
 #include <cjson/cJSON.h>
 #include "config.h"
 #include <errno.h>
+#include <time.h>
+
+#include <mosquitto.h>
+
+
 //#include <arpa/inet.h>  // for socket functions
 
 #define MAX_DEVICES 128
@@ -15,7 +20,9 @@
 #define MAX_REGISTERS 64
 #define RETRY_DELAY 5   // seconds between retries for checking status of redis server
 
-//gcc -o  modbus_to_redis  modbus_to_redis.c config.c -lmodbus -lcjson -lsqlite3 -lhiredis 
+//sudo apt-get install libmosquitto-dev mosquitto
+//gcc -o  modbus_to_redis  modbus_to_redis.c config.c -lmodbus -lcjson -lsqlite3 -lhiredis -lmosquitto
+
 #define KNRM  "\x1B[0m"   // Normal/Reset
 #define KRED  "\x1B[31m"   // Red
 #define KGRN  "\x1B[32m"   // Green
@@ -201,7 +208,7 @@ int read_modbus(modbus_t *ctx, int function, int address, int count, uint16_t *b
 
 
 
-int upload_modbus_data_to_redis(redisContext *redis, Device *dev, int ttl) {
+int upload_modbus_data_to_redis_mqtt(redisContext *redis,struct mosquitto *mosq, Device *dev, int ttl) {
     if (!redis || !dev) {
         fprintf(stderr, "%sInvalid arguments to upload_modbus_data_to_redis%s\n",KRED,KNRM);
         return -1;
@@ -237,6 +244,17 @@ int upload_modbus_data_to_redis(redisContext *redis, Device *dev, int ttl) {
         redisReply *reply = (redisReply *)redisCommand(
             redis, "SET %s:%s %s EX %d",
             dev->devicename, map->parameter_name, strval, ttl);
+        if (mosq) {
+            // Publish to MQTT
+            char topic[128];
+            snprintf(topic, sizeof(topic), "modbus/%s/%s", dev->devicename, map->parameter_name);
+            int pub_rc = mosquitto_publish(mosq, NULL, topic, strlen(strval), strval, 1, false);
+            if (pub_rc != MOSQ_ERR_SUCCESS) {
+                fprintf(stderr, "%sFailed to publish MQTT message to topic %s: %s%s\n",KRED,
+                        topic, mosquitto_strerror(pub_rc),KNRM);
+            }   
+        }
+
 
         if (!reply) {
             fprintf(stderr, "%sRedis SET failed for %s:%s%s\n",KRED,
@@ -387,6 +405,18 @@ void clearScreen() {
     printf("\e[1;1H\e[2J"); // ANSI codes to clear screen & move cursor to top-left
 }
 
+void on_connect(struct mosquitto *mosq, void *obj, int rc) {
+    if(rc == 0) {
+        printf("Connected to broker\n");
+    } else {
+        printf("Connect failed: %d\n", rc);
+    }
+}
+
+void on_publish(struct mosquitto *mosq, void *obj, int mid) {
+    printf("Message published (mid=%d)\n", mid);
+}
+
 int main() {
     Config cfg;
     if (load_config("config.ini", &cfg) != 0) {
@@ -414,6 +444,20 @@ int main() {
         sqlite3_close(db);
         return 1;
     }
+
+    mosquitto_lib_init();
+    struct mosquitto *mosq = mosquitto_new(cfg.mqtt_client_id, true, NULL);
+    if (!mosq) {
+        fprintf(stderr, "%sFailed to create mosquitto instance%s\n",KRED,KNRM);
+        mosquitto_destroy(mosq);        
+        mosquitto_lib_cleanup();        
+    }else{
+        mosquitto_connect_callback_set(mosq, on_connect);
+        mosquitto_publish_callback_set(mosq, on_publish);
+        mosquitto_connect_async(mosq, cfg.mqtt_broker, cfg.mqtt_port, 60);
+        mosquitto_loop_start(mosq);  // non-blocking loop in background
+    }
+
 	//populate_redis_keys_for_flask(db, redis, cfg.redis_ttl);
 	
     modbus_t *ctx = modbus_new_rtu(cfg.device, cfg.baudrate, cfg.parity, cfg.data_bits, cfg.stop_bits);
@@ -460,7 +504,7 @@ int main() {
                     
 				}
 			}
-            upload_modbus_data_to_redis(redis,&devices[i], cfg.redis_ttl);
+            upload_modbus_data_to_redis_mqtt(redis,mosq,&devices[i], cfg.redis_ttl);
             if(devices[i].is_online)printf("\r%sModbus device id: %d is online%s",KCYN,devices[i].slaveid,KNRM);            
         }
         fflush(stdout);
