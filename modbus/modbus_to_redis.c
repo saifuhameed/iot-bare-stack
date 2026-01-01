@@ -407,7 +407,7 @@ void clearScreen() {
 
 void on_connect(struct mosquitto *mosq, void *obj, int rc) {
     if(rc == 0) {
-        printf("%s✅Connected to MQTT broker%s\n",KGRN, KNRM);
+        printf("%s✅ Connected to MQTT broker%s\n",KGRN, KNRM);
     } else {
         printf("%sConnect to MQTT broker failed: %d%s\n",KRED, rc, KNRM);
     }
@@ -452,11 +452,12 @@ int main() {
         mosquitto_destroy(mosq);        
         mosquitto_lib_cleanup();        
     }else{
+        printf("%s✅ MQTT client initialized and connecting to broker '%s:%d'%s\n",KGRN, cfg.mqtt_broker, cfg.mqtt_port,KNRM);
         mosquitto_connect_callback_set(mosq, on_connect);
-        mosquitto_publish_callback_set(mosq, on_publish);
+        mosquitto_publish_callback_set(mosq, on_publish);        
         mosquitto_connect_async(mosq, cfg.mqtt_broker, cfg.mqtt_port,  cfg.mqtt_keepalive);
         mosquitto_loop_start(mosq);  // non-blocking loop in background
-        printf("%s✅ MQTT client initialized and connecting to broker %s:%d%s\n",KGRN, cfg.mqtt_broker, cfg.mqtt_port,KNRM);
+        
     }
 
 	//populate_redis_keys_for_flask(db, redis, cfg.redis_ttl);
@@ -470,7 +471,7 @@ int main() {
         return 1;
     }
 
-    printf("%s✅ Modbus connection succeeded. [device:%s, baud: %d] %s\n",KGRN, cfg.device, cfg.baudrate, KNRM);
+    printf("%s✅ Modbus connection succeeded. [device: '%s', baud: '%d'] %s\n",KGRN, cfg.device, cfg.baudrate, KNRM);
 
     Device devices[MAX_DEVICES];
     int device_count = 0;
@@ -482,7 +483,7 @@ int main() {
         sqlite3_close(db);
         return 1;
     }
-    printf("%s✅ Devices loaded. Polling for %d devices ... %s\n",KGRN, device_count, KNRM);
+    printf("%s✅ Devices loaded. Polling for '%d' devices ... %s\n",KGRN, device_count, KNRM);
 
     while (1) {
         for (int i = 0; i < device_count; i++) {
