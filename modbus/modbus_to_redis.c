@@ -407,7 +407,7 @@ void clearScreen() {
 
 void on_connect(struct mosquitto *mosq, void *obj, int rc) {
     if(rc == 0) {
-        printf("%s✅ Connected to MQTT broker%s\n",KGRN, KNRM);
+        printf("%s✅ Connected to MQTT broker...%s\n",KGRN, KNRM);
     } else {
         printf("%sConnect to MQTT broker failed: %d%s\n",KRED, rc, KNRM);
     }
